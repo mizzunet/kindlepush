@@ -1,0 +1,38 @@
+# Enable verbose debug information.
+verbose: false
+
+# Your kindle address to receive e-books.
+kindleAddress: test@example.com #[required]
+
+# The cache directory.
+#cacheDir: ./cache
+
+# Enable resize image.(width x height)
+# Keep image original size if not specified this value.
+resizeImage: 480x360
+
+# The maximum mobi size limit, in MBytes.
+maxFileSize: 20
+
+# SMTP Configuration that used to send e-books.
+smtp: #[required]
+    # domain:port,(etc. gmail.com:25)
+    hostAndPort: 
+    # Display your email address.
+    # Default `account` value will used if no set this value.
+    senderAddress: 
+    # Use SSL to connect to the email server.
+    ssl: false
+    # Enable SMTP Authentication.
+    account: 
+    password: 
+
+# Specifies a kindlegen local path.
+# If not specifies, use a `PATH` environment variable as default dir.
+#kindlegen: kindlegen
+
+# A list of RSS/Atom Feeds.
+# each line start with `-`.
+feeds:
+  #- https://feedocean.com/feeds/sry69h
+  #- https://feedocean.com/feeds/d519ydb

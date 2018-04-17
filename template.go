@@ -1,479 +1,121 @@
-package kindlepush
+package main
 
 import (
-	"bytes"
-	"fmt"
-	"image"
-	"image/gif"
-	"image/jpeg"
-	"image/png"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync/atomic"
 	"text/template"
 	"time"
-
-	"github.com/antchfx/xquery/html"
-	"github.com/nfnt/resize"
-	"github.com/zhengchun/objectid"
-	"golang.org/x/net/html"
-	"golang.org/x/text/encoding/unicode"
+	"unicode/utf8"
 )
 
 var (
-	htmltmpl, _     = template.New("html").Parse(htmlTemplateStr)
-	contentstmpl, _ = template.New("contents").Parse(contentsTemplateStr)
-	ncxtmpl, _      = template.New("ncx").Parse(ncxTemplateStr)
-	opftmpl, _      = template.New("opf").Parse(opfTemplateStr)
-)
-
-type fileInfo struct {
-	id   string
-	name string
-	typ  string
-}
-
-var allowedTags = map[string]bool{
-	"body": true,
-	"div":  true,
-	"img":  true,
-	"p":    true,
-	"br":   true,
-	"hr":   true,
-	"a":    true,
-	"b":    true,
-	"font": true,
-	"h1":   true,
-	"h2":   true,
-	"h3":   true,
-}
-
-var allowedAttrs = map[string]bool{
-	"src":  true,
-	"size": true,
-	"href": true,
-}
-
-func isSelfClosingTag(t string) bool {
-	switch t {
-	case "hr", "img", "br":
-		return true
-	default:
-		return false
-	}
-}
-
-var seqNum int32
-
-func sequence() string {
-	return fmt.Sprintf("%d", atomic.AddInt32(&seqNum, 1))
-}
-
-func createHtmlFile(post *Post, htmlPath string, imageKeepSize bool) (htmlFile *fileInfo, imageFiles []*fileInfo) {
-	doc, err := html.Parse(strings.NewReader(post.Body))
-	if err != nil {
-		return
-	}
-	body := htmlquery.FindOne(doc, "//body")
-	// iteration all elements of HTML document.
-	var fn func(*bytes.Buffer, *html.Node)
-	fn = func(buf *bytes.Buffer, n *html.Node) {
-		if n.Type == html.TextNode {
-			buf.WriteString(strings.TrimSpace(n.Data))
-			return
-		}
-		if n.Type == html.CommentNode || !allowedTags[n.Data] {
-			return
-		}
-
-		selfClosing := isSelfClosingTag(n.Data)
-
-		buf.WriteString("<" + n.Data)
-		for _, attr := range n.Attr {
-			if ok := allowedAttrs[attr.Key]; ok {
-				val := attr.Val
-
-				// If an element is `src` element that means need
-				// download this image from remote server.
-				if n.Data == "img" && attr.Key == "src" {
-					f, err := downloadImage(val, imageKeepSize)
-					if err == nil {
-						imageFiles = append(imageFiles, f)
-						val = f.name
-					}
-
-					if err != nil && len(htmlPath) > 0 {
-						f, err = locateImage(val, htmlPath, imageKeepSize)
-						if err == nil {
-							imageFiles = append(imageFiles, f)
-							val = f.name
-						}
-					}
-				}
-
-				if val != "" {
-					buf.WriteString(fmt.Sprintf(` %s="%s"`, attr.Key, val))
-				}
+	defaultFuncMap = template.FuncMap{
+		"fdate": func(t time.Time, layout string) string {
+			return t.Format(layout)
+		},
+		"substr": func(s string, n int) string {
+			if utf8.RuneCountInString(s) <= n {
+				return s
 			}
-		}
-
-		if selfClosing {
-			buf.WriteString("/>")
-		} else {
-			buf.WriteString(">")
-		}
-
-		for child := n.FirstChild; child != nil; child = child.NextSibling {
-			fn(buf, child)
-		}
-		if !selfClosing {
-			buf.WriteString(fmt.Sprintf("</%s>", n.Data))
-		}
-	}
-	var buf bytes.Buffer
-	for child := body.FirstChild; child != nil; child = child.NextSibling {
-		fn(&buf, child)
+			return string([]rune(s)[:n]) + "..."
+		},
 	}
 
-	fname := filepath.Join(os.TempDir(), fmt.Sprintf("%s.html", objectid.New()))
-	if f, err := os.Create(fname); err == nil {
-		defer f.Close()
-		w := unicode.UTF8.NewEncoder().Writer(f)
-		// Passed data to template file.
-		type Model struct {
-			Title       string
-			Author      string
-			Body        string
-			Description string
-			Date        string
-			Link        string
-		}
-
-		err := htmltmpl.Execute(w, &Model{
-			Title:       post.Title,
-			Author:      post.Author,
-			Body:        buf.String(),
-			Description: post.FormatDescription(250),
-			Date:        post.FormatDate(),
-			Link:        post.Link,
-		})
-		if err != nil {
-			panic(err)
-		}
-		htmlFile = &fileInfo{
-			id:   sequence(),
-			name: f.Name(),
-			typ:  "application/xhtml+xml",
-		}
-	}
-	return
-}
-
-// downloadImage downloads an image via HTTP and returns local file path.
-var client = &http.Client{
-	Timeout: 15 * time.Second,
-}
-
-func locateImage(fileName string, htmlPath string, imageKeepSize bool) (*fileInfo, error) {
-	realFile := htmlPath + string(os.PathSeparator) + fileName
-	if _, err := os.Stat(realFile); err != nil {
-		return nil, err
-	}
-	fp, err := os.Open(realFile)
-	if err != nil {
-		return nil, err
-	}
-	defer fp.Close()
-	return adjustImage(fp, imageKeepSize)
-}
-func downloadImage(link string, imageKeepSize bool) (*fileInfo, error) {
-	fmt.Println(link)
-	resp, err := client.Get(link)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	return adjustImage(resp.Body, imageKeepSize)
-}
-
-func adjustImage(r io.Reader, imageKeepSize bool) (*fileInfo, error) {
-	// resize image
-	img, typ, err := image.Decode(r)
-	if err != nil {
-		return nil, err
-	}
-
-	if imageKeepSize == false {
-		const (
-			maxWidth  = uint(500)
-			maxHeight = uint(600)
-		)
-		img = resize.Thumbnail(maxWidth, maxHeight, img, resize.NearestNeighbor)
-	}
-
-	ext := ".jpg"
-	switch typ {
-	case "gif":
-		ext = ".gif"
-	case "png":
-		ext = ".png"
-	}
-
-	name := objectid.New().String() + ext
-	f, err := os.Create(filepath.Join(os.TempDir(), name))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	switch typ {
-	case "gif":
-		if err := gif.Encode(f, img, &gif.Options{NumColors: 256}); err != nil {
-			return nil, err
-		}
-	case "png":
-		if err := png.Encode(f, img); err != nil {
-			return nil, err
-		}
-	default: // jpeg or other types
-		if err := jpeg.Encode(f, img, &jpeg.Options{Quality: jpeg.DefaultQuality}); err != nil {
-			return nil, err
-		}
-	}
-
-	return &fileInfo{
-		id:   sequence(),
-		name: f.Name(),
-		typ:  typ,
-	}, nil
-}
-
-func createContentsFile(data map[string]map[string]string) *fileInfo {
-	f, err := os.Create(filepath.Join(os.TempDir(), "contents.html"))
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-
-	w := unicode.UTF8.NewEncoder().Writer(f)
-	err = contentstmpl.Execute(w, struct {
-		Title    string
-		Sections map[string]map[string]string
-	}{
-		Title:    "Table of Contents",
-		Sections: data,
-	})
-	if err != nil {
-		panic(err)
-	}
-	return &fileInfo{id: "contents", name: f.Name(), typ: "application/xhtml+xml"}
-}
-
-func createNcxFile(channels []*channel, postFileMaps map[*Post]*fileInfo) *fileInfo {
-	type Item struct {
-		Id          string
-		Link        string
-		Author      string
-		Description string
-		Title       string
-	}
-	type Section struct {
-		Id    int
-		Name  string
-		Items []Item
-	}
-
-	var sections []*Section
-	for i, channel := range channels {
-		sect := &Section{Id: i, Name: channel.name, Items: make([]Item, 0)}
-		sections = append(sections, sect)
-		for _, post := range channel.posts {
-			f := postFileMaps[post]
-			item := Item{
-				Id:          f.id,
-				Link:        f.name,
-				Author:      post.Author,
-				Description: post.FormatDescription(250),
-				Title:       post.Title,
-			}
-			sect.Items = append(sect.Items, item)
-		}
-	}
-
-	f, err := os.Create(filepath.Join(os.TempDir(), "contents.ncx"))
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	w := unicode.UTF8.NewEncoder().Writer(f)
-	err = ncxtmpl.Execute(w, struct {
-		Date     string
-		Sections []*Section
-	}{
-		Date:     time.Now().Format("2006-01-02"),
-		Sections: sections,
-	})
-	if err != nil {
-		panic(err)
-	}
-	return &fileInfo{id: "nav-contents", name: f.Name(), typ: "application/x-dtbncx+xml"}
-}
-
-func createOpfFile(files []*fileInfo) *fileInfo {
-	type File struct {
-		Id    string
-		Type  string
-		Name  string
-		IsRef bool
-	}
-
-	var list []File
-	for _, f := range files {
-		ref := false
-		if f.typ == "application/xhtml+xml" {
-			ref = true
-		}
-		list = append(list, File{
-			Id:    f.id,
-			Type:  f.typ,
-			Name:  f.name,
-			IsRef: ref,
-		})
-	}
-
-	f, err := os.Create(filepath.Join(os.TempDir(), fmt.Sprintf("%s.opf", objectid.New())))
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	w := unicode.UTF8.NewEncoder().Writer(f)
-	err = opftmpl.Execute(w, struct {
-		Date  string
-		Files []File
-	}{
-		Date:  time.Now().Format("2006-01-02"),
-		Files: list,
-	})
-	if err != nil {
-		panic(err)
-	}
-	return &fileInfo{id: sequence(), name: f.Name(), typ: ""}
-}
-
-const (
-	htmlTemplateStr = `<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+	detailTmpl, _ = template.New("text").Funcs(defaultFuncMap).Parse(`<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>{{.Title}}</title>
-	<meta content="{{.Author}}" name="author" />
-	<meta content="{{.Description}}" name="description" />
+	<meta name="author" content="{{.Author}}" />
+	<meta name="description" content="{{substr .Description 64}}" />
 </head>
 <body>
-	<h1><b>{{.Title}}</b></h1>
-	<p>{{.Author}} - {{.Date}}</p>
-	<p>{{.Body}}</p>
-	<p>——————</p>
-	<p height="1em" width="0">{{.Link}}</p>
+	<h3>{{.Title}}</h3>
+	<hr/>
+	<div>{{fdate .Published "Jan 02, 2006"}}{{if ne .Author ""}} by {{.Author}}{{end}}</div>
+	<section id="content">{{.Content}}</section>
+	<hr/>
+	<footer>{{.Url}}</footer>
 	</body>
-</html>`
+</html>`)
 
-	contentsTemplateStr = `<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-	<head>
-		<meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
-		<title>{{.Title}}</title>
-	</head>
-	<body>
-		<h1>{{.Title}}</h1>
-        {{ range $name,$links := .Sections }}
-		<h4>{{ $name }}</h4>
-		<ul>
-            {{ range $href,$text:= $links}}
-			<li><a href="{{ $href }}">{{ $text }}</a></li>
-            {{end}}
-        </ul>
-		{{ end }}
-	</body>
-</html>`
+	tocTmpl, _ = template.New("toc").Parse(`<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+	<title>{{.Title}}</title>
+</head>
+<body>
+	<h1>{{.Title}}</h1>
+	{{ range $_,$section:=.List }}
+	<h4>{{ $section.Title }}</h4>
+	<ul>
+		{{ range $,$f:= $section.List}}<li><a href="{{ $f.Path }}">{{ index $f.Prop "title" }}</a></li>{{end}}
+	</ul>
+	{{ end }}
+</body>
+</html>`)
 
-	ncxTemplateStr = `<?xml version='1.0' encoding='utf-8'?>
+	ncxTmpl, _ = template.New("ncx").Parse(`<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
-<ncx xmlns:mbp="http://mobipocket.com/ns/mbp" xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="en-GB">
+<ncx xmlns:mbp="http://mobipocket.com/ns/mbp" xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="en-US">
 	<head>
-		<meta content="KindlePush-{{.Date}}" name="dtb:uid" />
-		<meta content="2" name="dtb:depth" />
-		<meta content="0" name="dtb:totalPageCount" />
-		<meta content="0" name="dtb:maxPageNumber" />
-	</head>	
-	<docTitle>
-		<text>KindlePush-{{.Date}}</text>
-	</docTitle>
-	<docAuthor>
-		<text>KindlePush</text>
-	</docAuthor>	
+		<meta name="dtb:uid" content="urn:uuid:{{.UUID}}" />
+		<meta name="dtb:depth" content="2" />
+		<meta name="dtb:totalPageCount" content="0" />
+		<meta name="dtb:maxPageNumber" content="0" />
+	</head>
+	<docTitle><text>{{.Title}}</text></docTitle>
+	<docAuthor><text>{{.Author}}</text></docAuthor>	
 	<navMap>
-		<navPoint playOrder="0" class="periodical" id="periodical">
-			<navLabel>
-				<text>Table of Contents</text>
-			</navLabel>
-			<content src="contents.html" />
-
-			{{ range $num,$section:=.Sections}}
-			<navPoint playOrder="{{ $section.Id }}" class="section" id="s-{{$num}}">				
-				<navLabel>
-					<text>{{$section.Name}}</text>
-				</navLabel>						
-				<content src="{{  (index $section.Items 0).Link }}" />
-				{{ range $num,$item:=$section.Items }}
-				<navPoint playOrder="{{$item.Id}}" class="article" id="item-{{$num}}">					
-					<navLabel>
-						<text>{{$item.Title}}</text>
-					</navLabel>					
-					<content src="{{$item.Link}}" />					
-					<mbp:meta name="description">{{$item.Description}}</mbp:meta>					
-					<mbp:meta name="author">{{$item.Author}}</mbp:meta>
-				</navPoint>				
+	{{range $,$nav:=.NavPoint}}
+		<navPoint playOrder="{{$nav.Order}}" class="periodical" id="periodical">
+			<navLabel><text>{{index $nav.File.Prop "title"}}</text></navLabel>
+			<content src="{{$nav.File.Path}}" />
+			{{range $,$nav:=$nav.Child}}
+			<navPoint playOrder="{{$nav.Order}}" class="section" id="section-{{$nav.Order}}">
+				<navLabel><text>{{index $nav.File.Prop "title"}}</text></navLabel>
+				<content src="{{$nav.File.Path}}" />
+				{{range $,$nav:=$nav.Child}}
+					<navPoint playOrder="{{$nav.Order}}" class="article" id="item-{{$nav.Order}}">
+					<navLabel><text>{{index $nav.File.Prop "title"}}</text></navLabel>
+					<content src="{{$nav.File.Path}}" />
+					{{if (index $nav.File.Prop "description") }}<mbp:meta name="description">{{index $nav.File.Prop "description"}}</mbp:meta>{{end}}
+					{{if (index $nav.File.Prop "author") }}<mbp:meta name="author">{{index $nav.File.Prop "author"}}</mbp:meta>{{end}}
+					</navPoint>
 				{{end}}
 			</navPoint>
 			{{end}}
 		</navPoint>
+	{{end}}
 	</navMap>
-</ncx>`
+</ncx>`)
 
-	opfTemplateStr = `<?xml version='1.0' encoding='utf-8'?>
-<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="KindleFere_2010-10-15">
+	opfTmpl, _ = template.New("opf").Funcs(defaultFuncMap).Parse(`<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="BookId">
 <metadata>
 	<dc-metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-		<dc:title>KindlePush</dc:title>
-		<dc:language>en-us</dc:language>
-		<dc:Identifier id="uid">02FFA518EB</dc:Identifier>
-		<dc:creator>KindlePush</dc:creator>
-		<dc:publisher>KindlePush</dc:publisher> 
-		<dc:date>{{.Date}}</dc:date>		
+		<dc:title>{{index .Metadata "title"}}</dc:title>
+		<dc:language>{{index .Metadata "language"}}</dc:language>
+		<dc:Identifier id="BookId">urn:uuid:{{.UUID}}</dc:Identifier>
+		<dc:creator>{{index .Metadata "creator"}}</dc:creator>
+		<dc:publisher>{{index .Metadata "publisher"}}</dc:publisher>				
+		<dc:date>{{fdate (index .Metadata "date") "2006-01-02"}}</dc:date>
+		<dc:description>{{index .Metadata "description"}}</dc:description>	
 	</dc-metadata>
 	<x-metadata>
-		<output content-type="application/x-mobipocket-subscription-magazine" encoding="utf-8"/>
+		<output content-type="application/x-mobipocket-subscription-magazine" encoding="utf-8"/>		
 	</x-metadata>
 </metadata>
 <manifest>
-	{{range $,$file:= .Files }}
-	<item href="{{$file.Name}}" media-type="{{$file.Type}}" id="{{$file.Id}}"/>
-	{{end}}
+{{range $,$f:=.Manifest}}
+<item href="{{$f.Path}}" media-type="{{$f.MediaType}}" id="{{$f.Id}}"/>
+{{end}}
 </manifest>
-<spine toc="nav-contents">
-	<itemref idref="contents"/>
-	{{range $,$file:= .Files }}
-		{{if $file.IsRef}}
-		<itemref idref="{{$file.Id}}"/>
-		{{end}}
-	{{end}}	
+<spine toc="{{.Ncx.Id}}">
+{{range $,$f:=.Spine}}
+<itemref idref="{{$f.Id}}"/>
+{{end}}
 </spine>
 <guide>
-	<reference href="contents.html" type="toc" title="Table of Contents" />	
+<reference href="{{.Toc.Path}}" type="toc" title="{{index .Toc.Prop "title"}}" />
 </guide>
-</package>`
+</package>
+`)
 )

@@ -1,61 +1,86 @@
 KindlePush
 ===
-Subscribe rss feeds and delivered to your Kindle.
+Subscribe the RSS/Atom feeds and delivered to your Kindle.
 
-Requirements
+[FeedOcean.com](https://feedocean.com): Convert HTML to RSS and Atom feeds with full-text, Its free.
+
+### How to Use
+
+- Download a [KindleGen](https://www.amazon.com/gp/feature.html?docId=1000765211) software and install it into your computer.
+
+- Edit `config.yaml` file.
+
+- Run `kindlepush` command.
+
+### config.yaml
+
+- Required options.
+    * kindleAddress
+    * smtp        
+    * feeds
+
+example config.yaml
+
+```yaml
+kindleAddress: test@kindle.cn
+smtp:
+    # domain:port,(etc. gmail.com:25)
+    hostAndPort: smtp.gmail.com:465
+    # Display your email address.
+    # Default `account` value will used if no set this value.
+    senderAddress: xxx@gmail.com
+    # Use SSL to connect to the email server.
+    ssl: false
+    # Enable SMTP Authentication.
+    account: xxx@gmail.com
+    password: $password$
+feeds:
+  - https://feedocean.com/feeds/sry69h
+  - https://feedocean.com/feeds/d519ydb
+```
+
+Tips: Make sure your `senderAddress` already add to the approved e-mail address list. See [Add an Email Address to Receive Documents](https://www.amazon.com/gp/help/customer/display.html?nodeId=201974240).
+
+
+KindlePush
 ===
-[KindleGen](https://www.amazon.com/gp/feature.html?docId=1000765211) : KindleGen converts source content to Mobi formats file,officially supported by Amazon.
+KindlePush能将多个订阅的RSS/Atom源生成杂志模式的MOBI文件，并推送到你的Kindle设备。
 
-How To Use
+### 使用说明
+
+- 下载[KindleGen](https://www.amazon.com/gp/feature.html?docId=1000765211)并安装到本地机器。
+- 编辑 `config.yaml` 配置文件。
+- 运行 `kindlepush` 命令。
+
+请注意：正常接收投递电子杂志，你必须确保你的`senderAddress`邮件地址已经加入到kindle的邮箱列中。[Add an Email Address to Receive Documents](https://www.amazon.com/gp/help/customer/display.html?nodeId=201974240)。
+
+### config.yaml说明
+
+- 必填项
+    * kindleAddress
+    * smtp
+    * feeds
+
+A list of RSS/Atom feeds
 ===
-``` kindlepush --help```
 
-command line options:
-
-- max-number=50 : the maximum number of items to fetch.
-
-- kindle=xx@kindle.com : your kindle email address.
-
-- subscribes=engadget_en,techcrunch_en, ... : the id of rss feed to subscribed, use a comma(,) to separate.
-
-- email-from=xx@xx : your email address.
-
-- email-username=xx : your email account name.
-
-- email-password=xx : your email account password.
-
-- email-smtp=smtp.xx.xx:25 : the email SMTP address with port number.
-
-- email-password=xx : your email account password.
-
-- html-path=xx : Push all html files under path.
-
-- size-limit=xx : Size limit of mail server.
-
-- imgkeepsize : Keep image original size
-
-**KindlePush use your email account to send eBook to your kindle device address on the client, it's safe.**
-
-RSS feeds
-===
-|ID |Name |
+|Name |URL |
 |--------------------------|----------------|
-|36kr | [36氪](http://www.36kr.com)|
-|cnbeta | [Cnbeta IT News](http://www.cnbeta.com)|
-|engadget_en | [Engadget](http://www.engadget.com/)|
-|engadget_cn | [Engadget 中文版](http://cn.engadget.com/)|
-|eth | [Eth Fans](http://ethfans.org/) |
-|ftc | [FT 中文版](http://www.ftchinese.com)|
-|nyt_bs | [new york times business](https://nytimes.com/)|
-|nyt_cn | [new york times cn](https://cn.nytimes.com/)|
-|nyt_us | [new york times us](https://nytimes.com/)|
-|nyt_wld | [new york times world](https://nytimes.com/)|
-|rfa | [RFA](https://www.rfa.org)|
-|techcrunch_en | [Techcrunch](http://feeds.feedburner.com/)|
-|techcrunch_cn | [Techcrunch 中文版](http://techcrunch.cn)|
-|zhihu | [知乎每日精选](https://www.zhihu.com)|
-|blog_msdn_dotnet| [MSDN dotnet blog](https://blogs.msdn.microsoft.com/dotnet)|
+|36氪 | [http://36kr.com/feed](http://36kr.com/feed)|
+|Cnbeta IT News | [https://feedocean.com/feeds/gjn0yf](https://feedocean.com/feeds/gjn0yf)|
+|Engadget | [https://feedocean.com/feeds/3soj5w](https://feedocean.com/feeds/3soj5w)|
+|Engadget 中国版 | [https://feedocean.com/feeds/6381j2](https://feedocean.com/feeds/6381j2)|
+|以太坊中文区 | [https://ethfans.org/feed](https://ethfans.org/feed) |
+|FT中文版 | [https://feedocean.com/feeds/15qqtz](https://feedocean.com/feeds/15qqtz)|
+|The New York Times | [https://feedocean.com/feeds/5yoe4g](https://feedocean.com/feeds/5yoe4g)|
+|纽约时报中文网 | [https://feedocean.com/feeds/fpdymq](https://feedocean.com/feeds/fpdymq)|
+|RFA | [https://www.rfa.org/english/rss2.xml](https://www.rfa.org/english/rss2.xml)|
+|知乎日报 | [https://feedocean.com/feeds/sry69h](https://feedocean.com/feeds/sry69h)|
 
-welcome to contribute to more plugin.
 
-End
+Welcome to contribute and make is too better.
+
+
+![alt text](https://github.com/zhengchun/kindlepush/blob/master/docs/001.png)
+
+![alt text](https://github.com/zhengchun/kindlepush/blob/master/docs/002.png)

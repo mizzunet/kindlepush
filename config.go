@@ -1,29 +1,21 @@
-package kindlepush
+package main
 
 // The configuration options for kindlepush.
-type Config struct {
-	Debug bool
-	// MaxNumber specifies the maximum number of list entries
-	// in each one of subscribe.
-	MaxNumber int
-	// Subscribes is the channel list to subscribe.
-	Subscribes []string
-	// KindleAddr specifies the Kindle email account to receives.
-	KindleAddr string
-	// The email client config.
-	Email EmailConfig
-	// Push all html files under path
-	Htmlpath string
-	// Size limit of mail server
-	// 552 Requested mail action aborted: exceeded mailsize limit
-	SizeLimit int64
-	// Keep image original size
-	ImageKeepSize bool
+type appConfig struct {
+	Verbose       bool        `yaml:"verbose"`
+	KindleAddress string      `yaml:"kindleAddress"`
+	CacheDir      string      `yaml:"cacheDir"`
+	ResizeImage   string      `yaml:"resizeImage"`
+	MaxFileSize   int         `yaml:"maxFileSize"`
+	Feeds         []string    `yaml:"feeds"`
+	Smtp          *smtpConfig `yaml:"smtp"`
+	Kindlegen     string      `yaml:"kindlegen"`
 }
 
-type EmailConfig struct {
-	From     string
-	Username string
-	Password string
-	SMTP     string
+type smtpConfig struct {
+	SenderAddress string `yaml:"senderAddress"`
+	HostAndPort   string `yaml:"hostAndPort"`
+	SSL           bool   `yaml:"ssl"`
+	Account       string `yaml:"account"`
+	Password      string `yaml:"password"`
 }
