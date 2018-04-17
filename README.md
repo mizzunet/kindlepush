@@ -14,23 +14,29 @@ Subscribe the RSS/Atom feeds and delivered to your Kindle.
 
 ### config.yaml
 
-- Required options.
-    * kindleAddress
-    * smtp        
-    * feeds
+- Required
+    * kindleAddress - Kindle email address.
+    * smtp - About SMTP configuration used to send email. 
+    * feeds - List of Atom/RSS feed URLs.
+- Optional
+    * cacheDir - Output directory.
+    * resizeImage - Resize image with specifies width and height.
+    * maxFileSize - Max mobi file size.
+    * kindlegen - kindlegen.exe path.
 
-example config.yaml
+
+`config.yaml` example
 
 ```yaml
 kindleAddress: test@kindle.cn
 smtp:
-    # domain:port,(etc. gmail.com:25)
+    # domain:port,(etc. gmail.com:25), port number is 25 in default.
     hostAndPort: smtp.gmail.com:465
     # Display your email address.
     # Default `account` value will used if no set this value.
     senderAddress: xxx@gmail.com
     # Use SSL to connect to the email server.
-    ssl: false
+    ssl: true
     # Enable SMTP Authentication.
     account: xxx@gmail.com
     password: $password$
@@ -56,10 +62,15 @@ KindlePush能将多个订阅的RSS/Atom源生成杂志模式的MOBI文件，并�
 
 ### config.yaml说明
 
-- 必填项
-    * kindleAddress
-    * smtp
-    * feeds
+- 必选
+    * kindleAddress - Kindle email address.
+    * smtp - About SMTP configuration used to send email. 
+    * feeds - List of Atom/RSS feed URLs.
+- 可选
+    * cacheDir - Output directory.
+    * resizeImage - Resize image with specifies width and height.
+    * maxFileSize - Max mobi file size.
+    * kindlegen - kindlegen.exe path.
 
 A list of RSS/Atom feeds
 ===
