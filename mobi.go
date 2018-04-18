@@ -21,7 +21,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/zhengchun/objectid"
-	"golang.org/x/text/encoding/unicode"
 )
 
 type fileType int
@@ -173,9 +172,7 @@ func createDetailFile(dir string, post *article, resizeImage func(image.Image) (
 		return nil, err
 	}
 	defer f.Close()
-
-	w := unicode.UTF8.NewEncoder().Writer(f)
-	if err := detailTmpl.Execute(w, post); err != nil {
+	if err := detailTmpl.Execute(f, post); err != nil {
 		return nil, err
 	}
 	logrus.Debugf("%s generate successful", post.Url)
@@ -224,7 +221,6 @@ func createNcx(unid uuid.UUID, dir string, toc *file, list []*section) (*file, e
 	}
 	defer f.Close()
 
-	w := unicode.UTF8.NewEncoder().Writer(f)
 	data := struct {
 		UUID     uuid.UUID
 		Title    string
@@ -236,7 +232,7 @@ func createNcx(unid uuid.UUID, dir string, toc *file, list []*section) (*file, e
 		Author:   "KindlePush",
 		NavPoint: []*navPoint{rootNav},
 	}
-	if err := ncxTmpl.Execute(w, data); err != nil {
+	if err := ncxTmpl.Execute(f, data); err != nil {
 		return nil, err
 	}
 
@@ -254,8 +250,6 @@ func createToc(dir string, list []*section) (*file, error) {
 	}
 	defer f.Close()
 
-	w := unicode.UTF8.NewEncoder().Writer(f)
-
 	data := struct {
 		Title string
 		List  []*section
@@ -263,7 +257,7 @@ func createToc(dir string, list []*section) (*file, error) {
 		Title: "Table of Contents",
 		List:  list,
 	}
-	if err := tocTmpl.Execute(w, data); err != nil {
+	if err := tocTmpl.Execute(f, data); err != nil {
 		return nil, err
 	}
 	return &file{
@@ -317,8 +311,6 @@ func createOpf(dir string, list []*section) (*file, error) {
 			}
 		}
 	}
-
-	w := unicode.UTF8.NewEncoder().Writer(f)
 	data := struct {
 		UUID     uuid.UUID
 		Manifest []*file
@@ -334,7 +326,7 @@ func createOpf(dir string, list []*section) (*file, error) {
 		Toc:      toc,
 		Metadata: metadata,
 	}
-	if err := opfTmpl.Execute(w, data); err != nil {
+	if err := opfTmpl.Execute(f, data); err != nil {
 		os.Remove(toc.Path)
 		os.Remove(ncx.Path)
 		return nil, err
