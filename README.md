@@ -1,16 +1,16 @@
-KindlePush
+KindlePush [![GitHub release](https://img.shields.io/github/release/zhengchun/kindlepush.svg)](https://GitHub.com/zhengchun/kindlepush/releases/)
 ===
 Subscribe the RSS/Atom feeds and delivered to your Kindle.
 
-[FeedOcean.com](https://feedocean.com): Convert HTML to RSS and Atom feeds with full-text, Its free.
+Download [KindlePush](https://github.com/zhengchun/kindlepush/releases) latest version.
 
 ### How to Use
 
-- Download a [KindleGen](https://www.amazon.com/gp/feature.html?docId=1000765211) software and install it into your computer.
+- Download [KindleGen](https://www.amazon.com/gp/feature.html?docId=1000765211) software and install into your computer.
 
 - Edit `config.yaml` file.
 
-- Run `kindlepush` command.
+- Run `kindlepush` or `kindlepush -config=config.yaml` command.
 
 ### config.yaml
 
@@ -45,32 +45,34 @@ feeds:
   - https://feedocean.com/feeds/d519ydb
 ```
 
-Tips: Make sure your `senderAddress` already add to the approved e-mail address list. See [Add an Email Address to Receive Documents](https://www.amazon.com/gp/help/customer/display.html?nodeId=201974240).
+NOTES: Make sure `senderAddress` add to your kindle approved e-mail address list. See [Add an Email Address to Receive Documents](https://www.amazon.com/gp/help/customer/display.html?nodeId=201974240).
 
-
-KindlePush
+中文说明
 ===
-KindlePush能将多个订阅的RSS/Atom源生成杂志模式的MOBI文件，并推送到你的Kindle设备。
+
+`KindlePush`是Kindle电子书推送软件，能够将你订阅多个RSS/Atom源生成MOBI格式的电子杂志，并推送到你的Kindle设备上阅读。
 
 ### 使用说明
 
 - 下载[KindleGen](https://www.amazon.com/gp/feature.html?docId=1000765211)并安装到本地机器。
-- 编辑 `config.yaml` 配置文件。
-- 运行 `kindlepush` 命令。
 
-请注意：正常接收投递电子杂志，你必须确保你的`senderAddress`邮件地址已经加入到kindle的邮箱列中。[Add an Email Address to Receive Documents](https://www.amazon.com/gp/help/customer/display.html?nodeId=201974240)。
+- 编辑 `config.yaml` 配置文件。
+
+- 运行 `kindlepush` 或 `kindlepush -config=config.yaml` 命令。
+
+请注意：正常接收投递电子杂志，你必须确保你的`senderAddress`邮件地址已经加入到kindle的邮箱列中。[添加用于接收文档的电子邮箱](https://www.amazon.cn/gp/help/customer/display.html?nodeId=201974240)。
 
 ### config.yaml说明
 
 - 必选
-    * kindleAddress - Kindle email address.
-    * smtp - About SMTP configuration used to send email. 
-    * feeds - List of Atom/RSS feed URLs.
+    * kindleAddress - Kindle的邮箱地址。
+    * smtp - SMTP配置，用于邮箱投递。
+    * feeds - Atom/RSS源列表。
 - 可选
-    * cacheDir - Output directory.
-    * resizeImage - Resize image with specifies width and height.
-    * maxFileSize - Max mobi file size.
-    * kindlegen - kindlegen.exe path.
+    * cacheDir - 生成的输出目录。
+    * resizeImage - 自定义略缩图像大小，可以减少电子书的大小。
+    * maxFileSize - Mobi文件最大的允许大小。
+    * kindlegen - kindlegen.exe文件路径。
 
 A list of RSS/Atom feeds
 ===
@@ -88,9 +90,9 @@ A list of RSS/Atom feeds
 |RFA | [https://www.rfa.org/english/rss2.xml](https://www.rfa.org/english/rss2.xml)|
 |知乎日报 | [https://feedocean.com/feeds/sry69h](https://feedocean.com/feeds/sry69h)|
 
+[FeedOcean.com](https://feedocean.com): Provides convert HTML to RSS and Atom feeds with full-text, Its free.
 
-Welcome to contribute and make is too better.
-
+**You're welcome to contribute.**
 
 ![alt text](https://github.com/zhengchun/kindlepush/blob/master/docs/001.png)
 
