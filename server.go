@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,7 +22,9 @@ import (
 )
 
 type server struct {
-	conf *appConfig
+	conf   *appConfig
+	once   sync.Once
+	client *http.Client
 }
 
 // About An article information and body.
@@ -34,7 +38,28 @@ type article struct {
 	Published   time.Time
 }
 
+func (s *server) init() {
+	var proxyFunc = http.ProxyFromEnvironment
+	if s.conf.Proxy != "" {
+		proxyURL, err := url.Parse(s.conf.Proxy)
+		if err != nil {
+			logrus.Warn("proxy address is invalid")
+		} else {
+			proxyFunc = http.ProxyURL(proxyURL)
+		}
+	}
+	s.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy:                 proxyFunc,
+			IdleConnTimeout:       60 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+}
+
 func (s *server) run() {
+	s.once.Do(s.init)
 	// Make sure directory is exists.
 	os.Mkdir(s.conf.CacheDir, os.ModePerm)
 	if len(s.conf.Feeds) == 0 {
@@ -134,9 +159,15 @@ func (s *server) buildMobi(list []*section) (os.FileInfo, error) {
 
 func (s *server) fetchFeed(urlStr string) (*section, error) {
 	logrus.Debugf("downloading feed %s", urlStr)
-	feed, err := syndfeed.LoadURL(urlStr)
+	res, err := s.client.Get(urlStr)
 	if err != nil {
-		return nil, fmt.Errorf("download feed %s failed: %v", urlStr, err)
+		return nil, fmt.Errorf("feed download failed: %v", err)
+	}
+	defer res.Body.Close()
+
+	feed, err := syndfeed.Parse(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("feed parse failed: %v", err)
 	}
 	sec := &section{Title: feed.Title}
 	for _, item := range feed.Items {
@@ -158,7 +189,7 @@ func (s *server) fetchFeed(urlStr string) (*section, error) {
 		if len(item.Authors) > 0 {
 			post.Author = item.Authors[0].Name
 		}
-		f, err := createDetailFile(s.conf.CacheDir, post, s.resizeImageHandler)
+		f, err := createDetailFile(s.client, s.conf.CacheDir, post, s.resizeImageHandler)
 		if err != nil {
 			logrus.Warn(err)
 			continue

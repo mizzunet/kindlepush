@@ -121,7 +121,7 @@ func adjustImage(dir string, r io.ReadCloser, resizeImage func(image.Image) (ima
 	}, nil
 }
 
-func createDetailFile(dir string, post *article, resizeImage func(image.Image) (image.Image, error)) (*file, error) {
+func createDetailFile(client *http.Client, dir string, post *article, resizeImage func(image.Image) (image.Image, error)) (*file, error) {
 	var (
 		imgs []*file
 		wg   sync.WaitGroup
@@ -145,7 +145,7 @@ func createDetailFile(dir string, post *article, resizeImage func(image.Image) (
 		go func() {
 			defer wg.Done()
 			logrus.Debugf("downloading image %s", imgURL)
-			resp, err := http.Get(imgURL)
+			resp, err := client.Get(imgURL)
 			if err != nil {
 				logrus.Warnf("image %s download failed.", err)
 				return

@@ -10,6 +10,7 @@ type appConfig struct {
 	Feeds         []string    `yaml:"feeds"`
 	Smtp          *smtpConfig `yaml:"smtp"`
 	Kindlegen     string      `yaml:"kindlegen"`
+	Proxy         string      `yaml:"proxy"`
 }
 
 type smtpConfig struct {

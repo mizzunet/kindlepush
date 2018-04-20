@@ -31,6 +31,9 @@ smtp: #[required]
 # If not specifies, use a `PATH` environment variable as default dir.
 #kindlegen: kindlegen
 
+# Proxy Configuration
+#proxy: http://127.0.0.1:8888
+
 # A list of RSS/Atom Feeds.
 # each line start with `-`.
 feeds:
