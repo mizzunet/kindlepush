@@ -23,6 +23,7 @@ Download [KindlePush](https://github.com/zhengchun/kindlepush/releases) latest v
     * resizeImage - Resize image with specifies width and height.
     * maxFileSize - Max mobi file size.
     * kindlegen - kindlegen.exe path.
+    * proxy - HTTP proxy.
 
 
 `config.yaml` example
@@ -73,6 +74,7 @@ NOTES: Make sure `senderAddress` add to your kindle approved e-mail address list
     * resizeImage - 自定义略缩图像大小，可以减少电子书的大小。
     * maxFileSize - Mobi文件最大的允许大小。
     * kindlegen - kindlegen.exe文件路径。
+    * proxy - HTTP代理。
 
 A list of RSS/Atom feeds
 ===
