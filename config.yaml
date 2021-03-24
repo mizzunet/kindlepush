@@ -17,15 +17,15 @@ maxFileSize: 20
 # SMTP Configuration that used to send e-books.
 smtp: #[required]
     # domain:port,(etc. gmail.com:25)
-    hostAndPort: 
+    hostAndPort: smtp.gmail.com:465
     # Display your email address.
     # Default `account` value will used if no set this value.
     senderAddress: 
     # Use SSL to connect to the email server.
-    ssl: false
+    ssl: true
     # Enable SMTP Authentication.
-    account: 
-    password: 
+    account: mizzunetbackup@gmail.com
+    password: 9446600459
 
 # Specifies a kindlegen local path.
 # If not specifies, use a `PATH` environment variable as default dir.
@@ -37,5 +37,6 @@ smtp: #[required]
 # A list of RSS/Atom Feeds.
 # each line start with `-`.
 feeds:
-  #- https://feedocean.com/feeds/sry69h
-  #- https://feedocean.com/feeds/d519ydb
+  - http://feeds.feedburner.com/GDBcode
+https://www.blog.google/rss/
+  - https://hackernoon.com/tagged/deep-learning/feed
